@@ -31,7 +31,7 @@ registerTopcatPlugin(function(pluginUrl){
 		            _.each(facility.config().authenticationTypes, function(authenticationType){
 		                if(authenticationType.plugin == 'cas'){
 
-		                    var service = window.location.href.replace(/#.*$/, '').replace(/[^\/]*$/, '') + 'topcat_cas_plugin/cas?facilityName=' + facility.config().name;
+		                    var service = window.location.href.replace(/#.*$/, '').replace(/[^\/]*$/, '') + 'topcat_cas_plugin/cas.html?facilityName=' + facility.config().name;
 
 		                    var casIframe = $('<iframe>').attr({
 		                        src: authenticationType.casUrl + '/login?service=' + encodeURIComponent(service)
@@ -57,14 +57,14 @@ registerTopcatPlugin(function(pluginUrl){
 	            casIframes = [];
 	        });
 
-			$rootScope.$on('login:external:cas', function(){
-				var service = window.location.href.replace(/#.*$/, '').replace(/[^\/]*$/, '') + 'topcat_cas_plugin/cas?facilityName=' + this.facilityName;
-				console.log('cas');
+			$rootScope.$on('login:external:cas', function(event, facility, authenticationType){
+				var service = window.location.href.replace(/#.*$/, '').replace(/[^\/]*$/, '') + 'topcat_cas_plugin/cas.html?facilityName=' + facility.config().name;
+				window.location = authenticationType.casUrl + '/login?service=' + encodeURIComponent(service);
 			});
 
 			$rootScope.$on('cas:authentication', function(event, facilityName, ticket){
-	            var service = window.location.href.replace(/#.*$/, '').replace(/[^\/]*$/, '') + 'topcat_cas_plugin/cas?facilityName=' + facilityName;
-	            tc.icat(facilityName).login('cas', service, ticket).then(function(){
+	            var service = window.location.href.replace(/#.*$/, '').replace(/[^\/]*$/, '') + 'topcat_cas_plugin/cas.html?facilityName=' + facilityName;
+	            tc.icat(facilityName).login('cas', {service: service, ticket: ticket}).then(function(){
 	                var name;
 	                var params = {};
 	                if($sessionStorage.lastState){
@@ -76,6 +76,38 @@ registerTopcatPlugin(function(pluginUrl){
 	                $state.go(name, params);
 	            });
 	        });
+
+	        $rootScope.$on('session:remove', function(icat){
+	        	if(icat.session().plugin == 'cas'){
+                    var authenticationTypesIndex = {};
+                    _.each(icat.facility().config().authenticationTypes, function(authenticationType){
+                        authenticationTypesIndex[authenticationType.plugin] = authenticationType;
+                    });
+
+                    var authenticationType = authenticationTypesIndex['cas'];
+
+                    var casIframe = $('<iframe>').attr({
+                        src: authenticationType.casUrl + '/logout'
+                    }).css({
+                        position: 'relative',
+                        left: '-1000000px',
+                        height: '1px',
+                        width: '1px'
+                    });
+
+                    $(document.body).append(casIframe);
+
+                    var defered = $q.defer();
+                    promises.push(defered.promise);
+
+                    $(casIframe).on('load', function(){
+                        defered.resolve();
+                        $(casIframe).remove();
+                    });
+
+                }
+	        });
+
 		}
 	};
 });
