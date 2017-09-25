@@ -1,7 +1,7 @@
 
 # Topcat CAS Plugin
 
-Authenticate with CAS (Central Authentication Service) on Topcat/Icat.
+Authenticate with CAS (Central Authentication Service) on Topcat.
 
 ## Installation
 
